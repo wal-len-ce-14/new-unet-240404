@@ -1,7 +1,5 @@
-./model
-./img/*
-./img/images/*.png
-./img/masks/*
+model
+img
 *.pth
 __pycache__
 
