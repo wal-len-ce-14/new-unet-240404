@@ -35,7 +35,7 @@ def train(
     # dataset
     try:
         dataset = data(img, mask)
-        train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)])
+        train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)], generator=torch.Generator().manual_seed(42))
         train_Loader = DataLoader(train_data, batch, shuffle=True, drop_last=True)
         test_Loader = DataLoader(test_data, batch, shuffle=False, drop_last=True)
     except Exception as e:
@@ -102,7 +102,7 @@ def train(
 
             p = torch.where(p > 0.5, 1., 0.)
             tr = torch.where(p == y, 1, 0)
-            if(idx < 3):
+            if(idx == 0):
                 acc += [((tr.sum() / tr.numel()) *100).to("cpu")]
         if(tr.sum()/tr.numel()*100 > max and (t_loss/len(test_Loader)) < 0.15):
             torch.save(model, f'./model/seg{name}_loss{round(float(t_loss/len(test_Loader)),2)}acc{round(float((tr.sum() / tr.numel()) *100), 2)}%.pth') 
@@ -124,20 +124,22 @@ def train(
     test_loss = np.array(test_loss)
     acc = np.array(acc)
 
-    plt.plot(train_loss ,label="train_loss", color='red')
-    plt.plot(test_loss, label="test_loss", color='blue')
-    plt.grid(True)
-    plt.legend()
-    plt.xticks(range(len(train_loss)))
-    plt.title(name)
-    plt.show()
+    # plt.plot(train_loss ,label="train_loss", color='red')
+    # plt.plot(test_loss, label="test_loss", color='blue')
+    # plt.grid(True)
+    # plt.legend()
+    # plt.xticks(range(1, len(train_loss)+1, 5))
+    # plt.title(name)
+    # plt.show()
 
-    plt.plot(acc ,label="acc", color='red')
-    plt.grid(True)
-    plt.legend()
-    plt.title(name)
-    plt.show()
+    # plt.plot(acc ,label="acc", color='red')
+    # plt.grid(True)
+    # plt.legend()
+    # plt.xticks(range(1, len(acc)+1, 5))
+    # plt.title(name)
+    # plt.show()
 
+    return train_loss, test_loss, acc
 
 
 if __name__ == "__main__":
