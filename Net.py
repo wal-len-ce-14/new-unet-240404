@@ -181,7 +181,7 @@ class UnetPlusPlus(nn.Module):   # 4 out channel
 
         
 if __name__ == "__main__":
-    x = torch.randn(10, 1, 224, 224)
+    x = torch.randn(1, 1, 224, 224)
     res = UnetPlusPlus(1, 1)
     y = res(x)
 

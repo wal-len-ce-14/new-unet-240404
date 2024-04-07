@@ -25,7 +25,7 @@ def train(
 ):
     
     #init var
-    max = 94
+    max = 92
     device = "cuda" if torch.cuda.is_available() else "cpu"
     train_loss = []
     test_loss = []
@@ -51,13 +51,14 @@ def train(
         print(f"2 error in")
         print(e)
 
+    print(f"\n****Start training {name} model****\n")
     # train loop
     for e in range(1, epochs+1):
         epoch_loss = 0
         t_loss = 0
         
     # try:
-        print(f"loop {e}:")
+        # print(f"loop {e}:")
         model = model.to(device)
         from tqdm import tqdm
         for idx, (x, y) in tqdm(enumerate(train_Loader), total=len(train_Loader)):
@@ -84,7 +85,7 @@ def train(
                 optimizer.step()
                 epoch_loss += loss.item()
         train_loss += [(epoch_loss/len(train_Loader))]
-        print(f"\t[+] epoch_loss = {epoch_loss/len(train_Loader)}")
+        # print(f"\t[+] epoch_loss = {epoch_loss/len(train_Loader)}")
 
         for idx, (x, y) in enumerate(test_Loader):
             x = x.to(device=device,dtype=torch.float32)
@@ -104,18 +105,13 @@ def train(
             tr = torch.where(p == y, 1, 0)
             if(idx == 0):
                 acc += [((tr.sum() / tr.numel()) *100).to("cpu")]
-        if(tr.sum()/tr.numel()*100 > max and (t_loss/len(test_Loader)) < 0.15):
+        if(tr.sum()/tr.numel()*100 > max and (t_loss/len(test_Loader)) < 0.2 and e > 20):
             torch.save(model, f'./model/seg{name}_loss{round(float(t_loss/len(test_Loader)),2)}acc{round(float((tr.sum() / tr.numel()) *100), 2)}%.pth') 
             max = round(float((tr.sum() / tr.numel()) *100), 2)
-            print("\t[+] save")
-        # print(idx, len(test_Loader))
+            # print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]
-        print(f"\t[+] test loss = {t_loss/len(test_Loader)}")
-        print(f"\t[+] acc = {round(float((tr.sum() / tr.numel()) *100), 2)}")
-    # except Exception as e:
-    #     print(f"4 error in {e} loop:")
-    #     print(e)
-    #     break
+        # print(f"\t[+] test loss = {t_loss/len(test_Loader)}")
+        # print(f"\t[+] acc = {round(float((tr.sum() / tr.numel()) *100), 2)}")
     end = time.time()
 
     print(f"Complete training. take {(end-start) // 60}")
