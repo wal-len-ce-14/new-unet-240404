@@ -3,4 +3,5 @@ img
 *.pth
 __pycache__
 totest
+yolov8_object_1
 
