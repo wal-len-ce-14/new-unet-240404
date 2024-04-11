@@ -131,8 +131,6 @@ class UnetPlusPlus(nn.Module):   # 4 out channel
         self.conv256to128 = DoubleConv(256, 128)
         self.conv320to64 = DoubleConv(320, 64)
 
-        # nn.ConvTranspose2d(in_c, out_c, kernel_size=2, stride=2)
-
         self.down64to128 = Down(64, 128)
         self.down128to256 = Down(128, 256)
         self.down256to512 = Down(256, 512)
@@ -178,11 +176,45 @@ class UnetPlusPlus(nn.Module):   # 4 out channel
         y = self.concatall(y1, x01, x02 ,x03)
         return y
 
-
+class MyUnet(nn.Module):   # 4 out channel
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.conv1to64 = DoubleConv(in_c, 64)
+        self.conv384to128 = DoubleConv(384, 128)
+        self.conv192to64 = DoubleConv(192, 64)
+        self.conv128to64 = DoubleConv(128, 64)
+        self.conv256to128 = DoubleConv(256, 128)
+        
+        self.down64to128 = Down(64, 128)
+        self.down128to256 = Down(128, 256)
+        self.down256to512 = Down(256, 512)
+        self.down512to1024 = Down(512, 1024)
+        self.up1024to512 = Up(1024, 512)
+        self.up512to256 = Up(512, 256)
+        self.T256to128 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.T128to64 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.out64to1 = nn.Conv2d(64, out_c, 1, 1, bias=False)
+        
+    def forward(self, x):
+        # down, encode
+        x1 = self.conv1to64(x)      
+        x2 = self.down64to128(x1)
+        x3 = self.down128to256(x2)
+        x4 = self.down256to512(x3)
+        x5 = self.down512to1024(x4)
+        # up, decode
+        x31 = self.up1024to512(x5, x4)
+        x22 = self.up512to256(x31, x3)
+        x11 = self.conv256to128(torch.cat([x2, self.T256to128(x3)], dim=1))
+        x13 = self.conv384to128(torch.cat([x2, x11, self.T256to128(x22)], dim=1))
+        x02 = self.conv128to64(torch.cat([x1, self.T128to64(x11)], dim=1))
+        x04 = self.conv192to64(torch.cat([x1, x02, self.T128to64(x13)], dim=1))
+        y = torch.cat([self.out64to1(x02), self.out64to1(x04)], dim=1)
+        return y
         
 if __name__ == "__main__":
     x = torch.randn(1, 1, 224, 224)
-    res = UnetPlusPlus(1, 1)
+    res = MyUnet(1, 1)
     y = res(x)
 
     print(x.shape)
