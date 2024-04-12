@@ -1,7 +1,9 @@
-model
-img
+model/*
+img/images/*
+img/masks/*
 *.pth
 __pycache__
-totest
-yolov8_object_1
+totest/*
+plt-test/*
+plt/*
 
