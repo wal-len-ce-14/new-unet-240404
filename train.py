@@ -148,8 +148,8 @@ def train(
         print(f"\t[+] iou: {iou[-1]}")
         # save model
         if(tr.sum()/tr.numel()*100 > max and (t_loss/len(test_Loader)) < 0.2 and e > 20):
-            torch.save(model, f'./model/seg{name}_loss{round(float(t_loss/len(test_Loader)),2)}dice{round(float(dice[-1]) *100, 2)}%.pth') 
-            max = round(float(dice[-1]) *100, 2)
+            torch.save(model, f'./model/seg{name}_loss{round(float(t_loss/len(test_Loader)),2)}dice{round(float(dice[-1]), 2)}%.pth') 
+            max = round(float(dice[-1]), 2)
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]        # save loss
        

@@ -27,7 +27,15 @@ def test_model(model_path, testing_img, testing_mask, file_name):
         show = torch.sigmoid(model(image.to(device=device, dtype=torch.float32)))
         if show.shape[1] > 1:
             show = show[:,-1,:,:]
-        show = torch.where(show > 0.5, 255, 0)
+        # show = torch.where(show > 0.85, 255, 0)
+        l1 = torch.where(show > 0.75, 90, 0)
+        l2 = torch.where(show > 0.6, 65, 0)
+        l3 = torch.where(show > 0.5, 60, 0)
+        l4 = torch.where(show > 0.4, 40, 0)
+        show = l1 + l2 + l3 + l4
+
+
+
         image_P = show.cpu().detach().numpy().squeeze()
         name = testing_img.split('/')[-1].split('.')[0] + ' --' + m.split('/')[-1].split('_')[0]
         plt.suptitle(name)
@@ -35,8 +43,6 @@ def test_model(model_path, testing_img, testing_mask, file_name):
         axes[idx+2].set_title(f"Predict use {m.split('/')[-1].split('_')[0].replace('seg','')}", fontsize=10)
     # plt.show()
     plt.savefig("plt-test/" + file_name + ".png")
-    # return plt
-    # cv.imshow("image",  cv.imread(testing_img, cv.IMREAD_GRAYSCALE))
 
 if __name__ == "__main__":  
     test_model(["./model/segUnet_loss0.18acc95.77%.pth"], "./totest/images/benign (2).png", "./totest/masks/benign (2)_mask.png", "test-1")
