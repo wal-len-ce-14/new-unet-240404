@@ -42,7 +42,7 @@ def train(
 ):
     
     #init var
-    max = 50
+    max = 77
     device = "cuda" if torch.cuda.is_available() else "cpu"
     train_loss = []
     test_loss = []
@@ -124,6 +124,9 @@ def train(
         train_loss += [(epoch_loss/len(train_Loader))]      # save loss
         print(f"\t[+] epoch {e} loss: {epoch_loss/len(train_Loader)}")
         # test
+        acc_inepoch = 0
+        dice_inepoch = 0
+        iou_inepoch = 0
         for idx, (x, y) in enumerate(test_Loader):
             x = x.to(device=device,dtype=torch.float32)
             y = y.to(device=device,dtype=torch.float32)
@@ -139,16 +142,20 @@ def train(
 
             p = torch.where(p > 0.5, 1., 0.)
             tr = torch.where(p == y, 1, 0)
-            if(idx == 0):
-                acc += [((tr.sum() / tr.numel()) *100).to("cpu")]
-                dice += [countdice(p, y).to("cpu")*100]
-                iou += [countiou(p, y).to("cpu")*100]
+
+            acc_inepoch += (tr.sum() / tr.numel())
+            dice_inepoch += countdice(p, y)
+            iou_inepoch += countiou(p, y)
+
+        acc += [acc_inepoch.to("cpu")*100 / len(test_Loader)]
+        dice += [dice_inepoch.to("cpu")*100 / len(test_Loader)]
+        iou += [iou_inepoch.to("cpu")*100 / len(test_Loader)]
         print(f"\t[+] test loss: {t_loss/len(test_Loader)}")
         print(f"\t[+] dice: {dice[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
         # save model
-        if(tr.sum()/tr.numel()*100 > max and (t_loss/len(test_Loader)) < 0.2 and e > 20):
-            torch.save(model, f'./model/seg{name}_loss{round(float(t_loss/len(test_Loader)),2)}dice{round(float(dice[-1]), 2)}%.pth') 
+        if(float(dice[-1]) > max and (t_loss/len(test_Loader)) < 0.2 and e > 20):
+            torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
             max = round(float(dice[-1]), 2)
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]        # save loss
