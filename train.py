@@ -91,31 +91,23 @@ def train(
             if(p.shape[1] == 4):
                 optimizer.zero_grad()
                 loss1 = loss_f(p[:,0,:,:].unsqueeze(1), y)
-                loss1.backward(retain_graph=True)
-                optimizer.step()
-                optimizer.zero_grad()
                 loss2 = loss_f(p[:,1,:,:].unsqueeze(1), y)
-                loss2.backward(retain_graph=True)
-                optimizer.step()
-                optimizer.zero_grad()
                 loss3 = loss_f(p[:,2,:,:].unsqueeze(1), y)
-                loss3.backward(retain_graph=True)
-                optimizer.step()
-                optimizer.zero_grad()
                 loss4 = loss_f(p[:,3,:,:].unsqueeze(1), y)
                 loss4.backward(retain_graph=True)
+                loss2.backward(retain_graph=True)
+                loss3.backward(retain_graph=True)
+                loss1.backward(retain_graph=True)
                 optimizer.step()
                 epoch_loss += loss4.item()
             elif(p.shape[1] == 2):
                 optimizer.zero_grad()
-                loss = loss_f(p[:,0,:,:].unsqueeze(1), y)
-                loss.backward(retain_graph=True)
+                loss1 = loss_f(p[:,0,:,:].unsqueeze(1), y)
+                loss2 = loss_f(p[:,1,:,:].unsqueeze(1), y)
+                loss1.backward(retain_graph=True)
+                loss2.backward(retain_graph=True)
                 optimizer.step()
-                optimizer.zero_grad()
-                loss = loss_f(p[:,1,:,:].unsqueeze(1), y)
-                loss.backward(retain_graph=True)
-                optimizer.step()
-                epoch_loss += loss.item()
+                epoch_loss += loss2.item()
             else:
                 loss = loss_f(p, y)
                 loss.backward()
@@ -154,9 +146,8 @@ def train(
         print(f"\t[+] dice: {dice[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
         # save model
-        if(float(dice[-1]) > max and (t_loss/len(test_Loader)) < 0.2 and e > 20):
+        if(float(dice[-1]) > 74 and (t_loss/len(test_Loader)) < 0.2 and e > 20 and dice[-1] > 50):
             torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
-            max = round(float(dice[-1]), 2)
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]        # save loss
        

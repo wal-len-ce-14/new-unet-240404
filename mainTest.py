@@ -2,14 +2,14 @@
 from test_model import test_model
 import matplotlib.pyplot as plt
 
-testID = 4
+testID = 6
 
 
 model = [
-    "model/segUnet_3_loss0.17dice6987.23%.pth",
-    "model/segUnet+_3_loss0.15dice6854.19%.pth",
-    "model/segUnet++_3_loss0.15dice7816.39%.pth",
-    "model/segMyUnet_3_loss0.17dice7644.79%.pth"
+    "model/segUnet_6_dice74.57.pth",
+    "model/segUnet+_6_dice76.9.pth",
+    "model/segUnet++_6_dice76.51.pth",
+    "model/segMyUnet_6_dice74.59.pth"
 ]
 
 for i in range(1, 6):
