@@ -211,14 +211,69 @@ class MyUnet(nn.Module):   # 4 out channel
         x04 = self.conv192to64(torch.cat([x1, x02, self.T128to64(x13)], dim=1))
         y = torch.cat([self.out64to1(x02), self.out64to1(x04)], dim=1)
         return y
+
+class resdown(nn.Module):
+        def __init__(self, in_c, out_c, w=224):  # 224
+            super(resdown, self).__init__()
+            self.pool = nn.AvgPool2d(w // 32, stride=1)
+            self.linear = nn.Linear(in_c, 1024)
+            self.out = nn.Linear(1024, out_c)
+            self.flat = nn.Flatten(1,-1)
+            self.drop = nn.Dropout(0.1)
+            self.reLU = nn.ReLU(inplace=True)
+        def forward(self, x):
+            x1 = self.pool(x)
+            x2 = self.drop(self.reLU(self.linear(self.drop(self.reLU(self.linear(self.flat(x1)))))))
+            print(self.flat(x1).shape)
+            y = self.out(x2)
+            return y
+
+class resNet(nn.Module):
+    
+            
+    def __init__(self, in_c, out_c):
+        super(resNet, self).__init__() 
+        self.out_c = out_c
+        self.x7conv3to64 = nn.Conv2d(in_c,64,7,1,3,bias=False)
+        self.pool = nn.MaxPool2d(2)
+        self.x1conv64to64 = DoubleConv(64,64)
+        self.x1conv64to128 = Down(64,128)
+        self.x1conv128to128 = DoubleConv(128,128)
+        self.x1conv128to256 = Down(128,256)
+        self.x1conv256to256 = DoubleConv(256,256)
+        self.x1conv256to512 = Down(256,512)
+        self.x1conv512to512 = DoubleConv(512,512)
+        self.x1conv512to1024 = Down(512,1024)
+        self.down = resdown(1024, out_c)
+    def forward(self, x):
+        x1 = self.pool(self.x7conv3to64(x))
+        x2 = self.x1conv64to64(x1) + x1
+        x3 = self.x1conv64to64(x2) + x2
+        x4 = self.x1conv64to64(x3) + x3
+        x5 = self.x1conv64to128(x4)
+        x6 = self.x1conv128to128(x5) + x5
+        x7 = self.x1conv128to128(x6) + x6
+        x8 = self.x1conv128to128(x7) + x7
+        x9 = self.x1conv128to256(x8)
+        x10 = self.x1conv256to256(x9) + x9
+        x11 = self.x1conv256to256(x10) + x10
+        x12 = self.x1conv256to256(x11) + x11
+        x13 = self.x1conv256to256(x12) + x12
+        x14 = self.x1conv256to512(x13)
+        x15 = self.x1conv512to512(x14) + x14
+        x16 = self.x1conv512to1024(x15)
+        y = self.down(x16)
+        return y
+
+
         
 if __name__ == "__main__":
-    x = torch.randn(1, 1, 224, 224)
-    res = MyUnet(1, 1)
+    x = torch.randn(10, 1, 224, 224)
+    res = resNet(1, 2)
     y = res(x)
 
-    print(x.shape)
-    print(y.shape)
+    print(f"input shape: {x.shape}")
+    print(f"input shape: {y.shape}")
 
 
 
