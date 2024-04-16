@@ -224,7 +224,7 @@ class resdown(nn.Module):
         def forward(self, x):
             x1 = self.pool(x)
             x2 = self.drop(self.reLU(self.linear(self.drop(self.reLU(self.linear(self.flat(x1)))))))
-            print(self.flat(x1).shape)
+            # print(self.flat(x1).shape)
             y = self.out(x2)
             return y
 

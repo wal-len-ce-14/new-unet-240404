@@ -53,7 +53,7 @@ def train(
             # forword
             x = x.to(device=device,dtype=torch.float32)
             y = y.to(device=device,dtype=torch.float32)
-            print(y.shape)
+            # print(y.shape)
             p = torch.sigmoid(model(x))
             # backward
             optimizer.zero_grad()
@@ -75,13 +75,14 @@ def train(
 
             p = torch.where(p > 0.5, 1., 0.)
             tr = torch.where(p == y, 1, 0)
-
+            
+            t_loss += loss.item()
             test_loss += [loss.item()]
             acc_inepoch += loss.item()
             dice_inepoch += countdice(p, y)
             iou_inepoch += countiou(p, y)
         
-        acc += [acc_inepoch.to("cpu")*100 / len(test_Loader)]
+        acc += [acc_inepoch*100 / len(test_Loader)]
         dice += [dice_inepoch.to("cpu")*100 / len(test_Loader)]
         iou += [iou_inepoch.to("cpu")*100 / len(test_Loader)]
         print(f"\t[+] test loss: {t_loss/len(test_Loader)}")
@@ -105,5 +106,5 @@ def train(
 
 if __name__ == "__main__":
     model = resNet(1,2)
-    train(model, 32, 1e-3, "./img/images/")
+    train(model, 32, 1e-3, "./img/images/", epochs=3)
 
