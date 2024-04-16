@@ -16,4 +16,3 @@ for i in range(1, 6):
     test_model(model, f"./totest/images/benign ({i}).png", f"./totest/masks/benign ({i})_mask.png", f"test{testID}_{(i-1)*2+1}")     
     test_model(model, f"./totest/images/malignant ({i}).png", f"./totest/masks/malignant ({i})_mask.png", f"test{testID}_{(i-1)*2+2}")
 
-    # plt.show()

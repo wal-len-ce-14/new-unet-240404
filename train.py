@@ -9,27 +9,11 @@ import matplotlib.pyplot as plt
 
 from dataset import data
 from Net import Unet
+from tool import countdice, countiou
+
 
 import os
 import time
-
-def countdice(pred, target):
-    smooth = 1e-6
-    pred = pred.view(-1)
-    target = target.view(-1)
-    TP = (pred * target).sum()
-    FP = ((1 - target) * pred).sum()
-    FN = ((1 - pred) * target).sum()
-    return (2. * TP) / ((2. * TP) + FP + FN + smooth)
-
-def countiou(pred, target):
-    smooth = 1e-6
-    pred = pred.view(-1)
-    target = target.view(-1)
-    TP = (pred * target).sum()
-    FP = ((1 - target) * pred).sum()
-    FN = ((1 - pred) * target).sum()
-    return (TP) / (TP + FP + FN + smooth)
 
 def train(
         model,
@@ -94,10 +78,10 @@ def train(
                 loss2 = loss_f(p[:,1,:,:].unsqueeze(1), y)
                 loss3 = loss_f(p[:,2,:,:].unsqueeze(1), y)
                 loss4 = loss_f(p[:,3,:,:].unsqueeze(1), y)
-                loss4.backward(retain_graph=True)
+                loss1.backward(retain_graph=True)
                 loss2.backward(retain_graph=True)
                 loss3.backward(retain_graph=True)
-                loss1.backward(retain_graph=True)
+                loss4.backward(retain_graph=True)
                 optimizer.step()
                 epoch_loss += loss4.item()
             elif(p.shape[1] == 2):
@@ -146,7 +130,7 @@ def train(
         print(f"\t[+] dice: {dice[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
         # save model
-        if(float(dice[-1]) > 74 and (t_loss/len(test_Loader)) < 0.2 and e > 20 and dice[-1] > 50):
+        if(float(dice[-1]) > 70 and (t_loss/len(test_Loader)) < 0.2 and e > 20 and iou[-1] > 50):
             torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]        # save loss
