@@ -34,7 +34,7 @@ def train(
     end = time.time()
     # dataset
     dataset = resdata(img)
-    train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)], generator=torch.Generator().manual_seed(42))
+    train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)])
     train_Loader = DataLoader(train_data, batch, shuffle=True, drop_last=True)
     test_Loader = DataLoader(test_data, batch, shuffle=False, drop_last=True)
     # set func
@@ -77,8 +77,7 @@ def train(
             tr = torch.where(p == y, 1, 0)
             
             t_loss += loss.item()
-            test_loss += [loss.item()]
-            acc_inepoch += loss.item()
+            acc_inepoch += (tr.sum() / tr.numel()).to('cpu')
             dice_inepoch += countdice(p, y)
             iou_inepoch += countiou(p, y)
         
@@ -89,7 +88,7 @@ def train(
         print(f"\t[+] dice: {dice[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
         # save model
-        if(float(dice[-1]) > 50 and (t_loss/len(test_Loader)) < 0.3 and e > 20 and iou[-1] > 40):
+        if(float(dice[-1]) > 50 and (t_loss/len(test_Loader)) < 0.4 and e > 20 and iou[-1] > 40):
             torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]   

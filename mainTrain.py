@@ -2,7 +2,7 @@ from Net import Unet, UnetPlus, UnetPlusPlus, MyUnet
 from train import train
 import matplotlib.pyplot as plt
 
-testID = 6
+testID = 8
 
 modelU = Unet(1,1)
 modelUP = UnetPlus(1,1)

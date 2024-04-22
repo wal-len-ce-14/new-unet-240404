@@ -38,7 +38,7 @@ def train(
     # dataset
     try:
         dataset = data(img, mask)
-        train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)], generator=torch.Generator().manual_seed(42))
+        train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)])
         train_Loader = DataLoader(train_data, batch, shuffle=True, drop_last=True)
         test_Loader = DataLoader(test_data, batch, shuffle=False, drop_last=True)
     except Exception as e:
