@@ -5,7 +5,26 @@ import matplotlib.pyplot as plt
 
 img_H = 224
 img_W = 224
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
+
+def test_res_model(model_path, testing_img, file_name):
+    image = torch.tensor(np.array(cv.resize(cv.imread(testing_img, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
+    image_O = image.cpu().detach().numpy().squeeze()
+    fig, axes = plt.subplots(1, 2, figsize=((model_path.__len__()+2)*3, 5))
+    plt.setp(axes, xticks=[], yticks=[])
+    model = torch.load(model_path).to(device=device)
+        
+    show = torch.sigmoid(model(image.to(device=device, dtype=torch.float32))).detach().numpy()
+    print(show.shape)
+    show = torch.where(show > 0.5, 1, 0)
+    axes[0].imshow(image_O, cmap="gray")
+    axes[0].set_title(f"Original Image\n{testing_img.split('/')[-1].split('.')[0]}", fontsize=10)
+    axes[1].imshow(image_O, cmap="gray")
+    if(np.array_equal(show, [[1,0]])):
+        axes[1].set_title("Predict\nbenign")
+    elif(np.array_equal(show, [[0,1]])):
+        axes[1].set_title("Predict\nmalignant")
+    plt.show()
 
 
 def test_model(model_path, testing_img, testing_mask, file_name):

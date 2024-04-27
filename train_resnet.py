@@ -30,6 +30,7 @@ def train(
     acc = []
     dice = []
     iou = []
+    recall = []
     start = time.time()
     end = time.time()
     # dataset
@@ -39,7 +40,7 @@ def train(
     test_Loader = DataLoader(test_data, batch, shuffle=False, drop_last=True)
     # set func
     optimizer = optim.Adam(model.parameters(), lr)
-    loss_f = nn.CrossEntropyLoss()
+    loss_f = nn.BCELoss()
 
     print(f"\n****Start training {name} model****\n")
 
@@ -72,7 +73,6 @@ def train(
             y = y.to(device=device,dtype=torch.float32)
             p = torch.sigmoid(model(x))
             loss = loss_f(p, y)
-
             p = torch.where(p > 0.5, 1., 0.)
             tr = torch.where(p == y, 1, 0)
             
@@ -80,13 +80,33 @@ def train(
             acc_inepoch += (tr.sum() / tr.numel()).to('cpu')
             dice_inepoch += countdice(p, y)
             iou_inepoch += countiou(p, y)
-        
+        from sklearn.metrics import recall_score, confusion_matrix
+        if e > 20:
+            import seaborn as sns
+            import matplotlib.pyplot as plt
+            y_b = torch.where(torch.all(torch.eq(y, torch.tensor([[1,0]]).to(device)), dim=1), 1, 0)
+            y_m = torch.where(torch.all(torch.eq(y, torch.tensor([[0,1]]).to(device)), dim=1), -1, 0)
+            yy = y_b+y_m
+            p_b = torch.where(torch.all(torch.eq(p, torch.tensor([[1,0]]).to(device)), dim=1), 1, 0)
+            p_m = torch.where(torch.all(torch.eq(p, torch.tensor([[0,1]]).to(device)), dim=1), -1, 0)
+            pp = p_b+p_m
+
+            cm = confusion_matrix(yy.to('cpu'), pp.to('cpu'))
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, cmap='Blues', fmt='g', cbar=False)
+            plt.xlabel('Predicted')
+            plt.ylabel('Actual')
+            plt.title('Confusion Matrix')
+            plt.savefig(f'plt/Confusion Matrix_{e}_{name}')
+
+        recall += [recall_score(y.to('cpu'), p.to('cpu'), average=None)[1]*100]
         acc += [acc_inepoch*100 / len(test_Loader)]
         dice += [dice_inepoch.to("cpu")*100 / len(test_Loader)]
         iou += [iou_inepoch.to("cpu")*100 / len(test_Loader)]
         print(f"\t[+] test loss: {t_loss/len(test_Loader)}")
         print(f"\t[+] dice: {dice[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
+        print(f"\t[+] recall: {recall[-1]}")
         # save model
         if(float(dice[-1]) > 50 and (t_loss/len(test_Loader)) < 0.4 and e > 20 and iou[-1] > 40):
             torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
@@ -94,14 +114,14 @@ def train(
         test_loss += [(t_loss/len(test_Loader))]   
     end = time.time()
     print(f"Complete training. take {(end-start) // 60}")
-
+    recall = np.array(recall)
     train_loss = np.array(train_loss)
     test_loss = np.array(test_loss)
     acc = np.array(acc)                                         
     dice = np.array(dice)
     iou = np.array(iou)  
 
-    return train_loss, test_loss, acc, dice, iou
+    return train_loss, test_loss, acc, dice, iou, recall
 
 if __name__ == "__main__":
     model = resNet(1,2)

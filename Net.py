@@ -219,7 +219,7 @@ class resdown(nn.Module):
             self.linear = nn.Linear(in_c, 1024)
             self.out = nn.Linear(1024, out_c)
             self.flat = nn.Flatten(1,-1)
-            self.drop = nn.Dropout(0.1)
+            self.drop = nn.Dropout(0.15)
             self.reLU = nn.ReLU(inplace=True)
         def forward(self, x):
             x1 = self.pool(x)
@@ -269,7 +269,7 @@ class resNet(nn.Module):
         
 if __name__ == "__main__":
     x = torch.randn(10, 1, 224, 224)
-    res = resNet(1, 2)
+    res = resNet(1, 1)
     y = res(x)
 
     print(f"input shape: {x.shape}")
