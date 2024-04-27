@@ -6,7 +6,7 @@ testID = 8
 
 res = resNet(1,2)
 
-R_trainl, R_loss, R_acc, R_dice, R_iou = train(res, 32, 1e-3, "./img/images/", epochs=100, name=f"resnet_{testID}")
+R_trainl, R_loss, R_acc, R_dice, R_iou = train(res, 64, 1e-3, "./img/images/", epochs=100, name=f"resnet_{testID}")
 
 # show results
 

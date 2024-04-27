@@ -22,7 +22,7 @@ def train(
         name=''
 ):
     #init var
-    max = 77
+    max = 70
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
     train_loss = []
