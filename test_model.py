@@ -2,6 +2,7 @@ import torch
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
+from tool import countdice, countiou
 
 img_H = 224
 img_W = 224
@@ -47,11 +48,11 @@ def test_model(model_path, testing_img, testing_mask, file_name):
         if show.shape[1] > 1:
             show = show[:,-1,:,:]
         # show = torch.where(show > 0.85, 255, 0)
-        l1 = torch.where(show > 0.75, 90, 0)
-        l2 = torch.where(show > 0.6, 65, 0)
-        l3 = torch.where(show > 0.5, 60, 0)
-        l4 = torch.where(show > 0.4, 40, 0)
-        show = l1 + l2 + l3 + l4
+        # l1 = torch.where(show > 0.75, 90, 0)
+        show = torch.where(show > 0.8, 255, 0)
+        # l3 = torch.where(show > 0.5, 60, 0)
+        # l4 = torch.where(show > 0.4, 40, 0)
+        # show = l1 + l2 + l3 + l4
 
 
 
@@ -59,7 +60,14 @@ def test_model(model_path, testing_img, testing_mask, file_name):
         name = testing_img.split('/')[-1].split('.')[0] + ' --' + m.split('/')[-1].split('_')[0]
         plt.suptitle(name)
         axes[idx+2].imshow(image_P, cmap="gray")  
-        axes[idx+2].set_title(f"Predict use {m.split('/')[-1].split('_')[0].replace('seg','')}", fontsize=10)
+        
+        dice=countdice(torch.where(show>1, 1, 0), torch.where(mask>1, 1, 0))
+        iou=countiou(torch.where(show>1, 1, 0), torch.where(mask>1, 1, 0))
+        dice = "{:.2f}".format(dice)
+        iou = "{:.2f}".format(iou)
+
+        axes[idx+2].set_title(f"Predict use {m.split('/')[-1].split('_')[0].replace('seg','')}\ndiec={dice}\niou={iou}", fontsize=10)
+        
     # plt.show()
     plt.savefig("plt-test/" + file_name + ".png")
 

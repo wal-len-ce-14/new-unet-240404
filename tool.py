@@ -5,7 +5,7 @@ def countdice(pred, target):
     TP = (pred * target).sum()
     FP = ((1 - target) * pred).sum()
     FN = ((1 - pred) * target).sum()
-    return (2. * TP) / ((2. * TP) + FP + FN + smooth)
+    return ((2. * TP) / ((2. * TP) + FP + FN + smooth))
 
 def countiou(pred, target):
     smooth = 1e-6

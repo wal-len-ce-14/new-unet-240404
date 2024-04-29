@@ -2,7 +2,7 @@
 from test_model import test_model
 import matplotlib.pyplot as plt
 
-testID = 6
+testID = 9
 
 
 model = [

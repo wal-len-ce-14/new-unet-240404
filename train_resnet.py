@@ -81,7 +81,7 @@ def train(
             dice_inepoch += countdice(p, y)
             iou_inepoch += countiou(p, y)
         from sklearn.metrics import recall_score, confusion_matrix
-        if e > 20:
+        if e > 29:
             import seaborn as sns
             import matplotlib.pyplot as plt
             y_b = torch.where(torch.all(torch.eq(y, torch.tensor([[1,0]]).to(device)), dim=1), 1, 0)
