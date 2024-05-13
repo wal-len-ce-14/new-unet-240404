@@ -22,7 +22,7 @@ def train(
         name=''
 ):
     #init var
-    max = 70
+    max = 1000
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
     train_loss = []
@@ -45,10 +45,12 @@ def train(
     print(f"\n****Start training {name} model****\n")
 
     # train loop
+    
     for e in range(1, epochs+1):
         epoch_loss = 0
         t_loss = 0
         # train
+        model.train()
         from tqdm import tqdm
         for idx, (x, y) in tqdm(enumerate(train_Loader), total=len(train_Loader)):
             # forword
@@ -65,6 +67,7 @@ def train(
         train_loss += [(epoch_loss/len(train_Loader))]      # save loss
         print(f"\t[+] epoch {e} loss: {epoch_loss/len(train_Loader)}")
         # test
+        model.train()
         acc_inepoch = 0
         dice_inepoch = 0
         iou_inepoch = 0
@@ -75,13 +78,13 @@ def train(
             loss = loss_f(p, y)
             p = torch.where(p > 0.5, 1., 0.)
             tr = torch.where(p == y, 1, 0)
-            
+            # print("p",p[-10:],"\ny", y[-10:])
             t_loss += loss.item()
             acc_inepoch += (tr.sum() / tr.numel()).to('cpu')
             dice_inepoch += countdice(p, y)
             iou_inepoch += countiou(p, y)
         from sklearn.metrics import recall_score, confusion_matrix
-        if e > 29:
+        if e > 10000:
             import seaborn as sns
             import matplotlib.pyplot as plt
             y_b = torch.where(torch.all(torch.eq(y, torch.tensor([[1,0]]).to(device)), dim=1), 1, 0)
@@ -98,7 +101,8 @@ def train(
             plt.ylabel('Actual')
             plt.title('Confusion Matrix')
             plt.savefig(f'plt/Confusion Matrix_{e}_{name}')
-
+        print("p => ", p[-8:])
+        print("y => ", y[-8:])
         recall += [recall_score(y.to('cpu'), p.to('cpu'), average=None)[1]*100]
         acc += [acc_inepoch*100 / len(test_Loader)]
         dice += [dice_inepoch.to("cpu")*100 / len(test_Loader)]
@@ -108,8 +112,10 @@ def train(
         print(f"\t[+] iou: {iou[-1]}")
         print(f"\t[+] recall: {recall[-1]}")
         # save model
-        if(float(dice[-1]) > 50 and (t_loss/len(test_Loader)) < 0.4 and e > 20 and iou[-1] > 40):
-            torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
+        if dice[-1]*iou[-1]*recall[-1]/(t_loss/(len(test_Loader)+0.00001)) > max:
+            # torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
+            torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth')
+            max = dice[-1]*iou[-1]*recall[-1]/(t_loss/len(test_Loader))
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]   
     end = time.time()

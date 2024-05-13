@@ -229,7 +229,6 @@ class resdown(nn.Module):
             return y
 
 class resNet(nn.Module):
-    
             
     def __init__(self, in_c, out_c):
         super(resNet, self).__init__() 
@@ -265,11 +264,50 @@ class resNet(nn.Module):
         y = self.down(x16)
         return y
 
+class CNN(nn.Module):
+    def __init__(self, in_c, out_c, w=224): 
+        super(CNN, self).__init__() 
+        self.x1conv3to64 = nn.Conv2d(in_c,64,1,1,0)
+        self.x3conv64to128 = nn.Conv2d(64,128,3,1,1)
+        self.x3conv128to256 = nn.Conv2d(128,256,3,1,1)
+        self.x3conv256to512 = nn.Conv2d(256,512,3,1,1)
+        self.x3conv512to1024 = nn.Conv2d(512,1024,3,1,1)
+        self.x3conv1024to2048 = nn.Conv2d(1024,2048,3,1,1)
+        self.poolx2 = nn.MaxPool2d(2)
+        # self.poolavg = nn.AvgPool2d(w // 8, stride=1)
+        self.flat = nn.Flatten(1,-1)
+        self.drop = nn.Dropout(0.15)
+        self.reLU = nn.ReLU(inplace=True)
+        self.linear2048to1024 = nn.Linear(2048, 1024)
+        self.linear1024to1024 = nn.Linear(1024, 1024)
+        self.linear1024to256 = nn.Linear(1024, 256)
+        self.linear256to256 = nn.Linear(256, 256)
+        self.linearto256 = nn.Linear(200704, 256)
+        self.out = nn.Linear(1024, out_c)
+        self.out2 = nn.Linear(256, out_c)
+    def forward(self, x):
+        x = self.poolx2(self.reLU(self.x1conv3to64(x)))
+        x = self.poolx2(self.reLU(self.x3conv64to128(x)))
+        x = self.poolx2(self.reLU(self.x3conv128to256(x)))
+        # print(x.shape)
+        x = self.flat(x)
+        # print(x.shape)
+        x = self.drop(self.reLU(self.linearto256(x)))
+        x = self.drop(self.reLU(self.linear256to256(x)))
+        x = self.drop(self.reLU(self.linear256to256(x)))
+        y = self.drop(self.reLU(self.out2(x)))
 
-        
+        return y
+
+
+
+
+
+
+
 if __name__ == "__main__":
     x = torch.randn(10, 1, 224, 224)
-    res = resNet(1, 1)
+    res = CNN(1, 2)
     y = res(x)
 
     print(f"input shape: {x.shape}")

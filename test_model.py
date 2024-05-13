@@ -3,32 +3,63 @@ import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 from tool import countdice, countiou
+from Net import resNet, CNN
+import os
 
 img_H = 224
 img_W = 224
 device = "cpu"
 
-def test_res_model(model_path, testing_img, file_name):
-    image = torch.tensor(np.array(cv.resize(cv.imread(testing_img, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
-    image_O = image.cpu().detach().numpy().squeeze()
-    fig, axes = plt.subplots(1, 2, figsize=((model_path.__len__()+2)*3, 5))
+def test_res_model2(model_path, testingimgdir, file_name):
+    imgdir = os.listdir(testingimgdir)
+    image_batch = torch.empty(10,1,224,224)
+    image_O = np.zeros((10,1,224,224))
+    fig, axes = plt.subplots(1, 2, figsize=(4, 3))
     plt.setp(axes, xticks=[], yticks=[])
     model = torch.load(model_path).to(device=device)
-        
-    show = torch.sigmoid(model(image.to(device=device, dtype=torch.float32))).detach().numpy()
-    print(show.shape)
-    show = torch.where(show > 0.5, 1, 0)
+
+    for i, image in enumerate(imgdir):
+        image = os.path.join(testingimgdir, imgdir[i])
+        image = torch.tensor(np.array(cv.resize(cv.imread(image, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
+        print(image.shape)
+        image_O[i] = image.cpu().detach().numpy().squeeze()
+        image_batch[i] = image
+
+    print(image_batch.shape)
+    show = torch.sigmoid(model(image_batch.to(device=device, dtype=torch.float32)))
+    # print(model(image.to(device=device, dtype=torch.float32)))
+    show = torch.where(show > 0.5, 1, 0).detach().numpy()
+    print(show)
+    # if 
+    # axes[0].imshow(image_O, cmap="gray")
+
+
+
+
+def test_res_model(model_path, testing_img, file_name, f=0):
+    image = torch.tensor(np.array(cv.resize(cv.imread(testing_img, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
+    image_O = image.cpu().detach().numpy().squeeze()
+    fig, axes = plt.subplots(1, 2, figsize=(4, 3))
+    plt.setp(axes, xticks=[], yticks=[])
+    model = torch.load(model_path).to(device=device)
+    # model = resNet(1,2)
+    # model.load_state_dict(torch.load(model_path))
+    print(image.shape)
+    show = torch.sigmoid(model(image.to(device=device, dtype=torch.float32)))
+    print(model(image.to(device=device, dtype=torch.float32)))
+    show = torch.where(show > 0.5, 1, 0).detach().numpy()
     axes[0].imshow(image_O, cmap="gray")
     axes[0].set_title(f"Original Image\n{testing_img.split('/')[-1].split('.')[0]}", fontsize=10)
     axes[1].imshow(image_O, cmap="gray")
     if(np.array_equal(show, [[1,0]])):
-        axes[1].set_title("Predict\nbenign")
+        axes[1].set_title("Predict\nbenign", fontsize=10)
     elif(np.array_equal(show, [[0,1]])):
-        axes[1].set_title("Predict\nmalignant")
-    plt.show()
+        axes[1].set_title("Predict\nmalignant", fontsize=10)
+    # plt.show()
+    plt.savefig("plt-test/" + file_name + ".png")
 
 
-def test_model(model_path, testing_img, testing_mask, file_name):
+def test_model(model_path, testing_img, testing_mask, file_name, f=0):
 
     image = torch.tensor(np.array(cv.resize(cv.imread(testing_img, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
     mask = torch.tensor(np.array(cv.resize(cv.imread(testing_mask, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
@@ -43,7 +74,10 @@ def test_model(model_path, testing_img, testing_mask, file_name):
     axes[1].set_title("Ground truth Mask", fontsize=10)
 
     for idx, m in enumerate(model_path):
-        model = torch.load(m).to(device=device)
+        if not f:
+            model = torch.load(m).to(device=device)
+        else:
+            model = model_path
         show = torch.sigmoid(model(image.to(device=device, dtype=torch.float32)))
         if show.shape[1] > 1:
             show = show[:,-1,:,:]
