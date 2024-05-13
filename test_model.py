@@ -21,17 +21,23 @@ def test_res_model2(model_path, testingimgdir, file_name):
     for i, image in enumerate(imgdir):
         image = os.path.join(testingimgdir, imgdir[i])
         image = torch.tensor(np.array(cv.resize(cv.imread(image, cv.IMREAD_GRAYSCALE), (img_H, img_W)))).unsqueeze(0).unsqueeze(0)
-        print(image.shape)
         image_O[i] = image.cpu().detach().numpy().squeeze()
         image_batch[i] = image
 
-    print(image_batch.shape)
     show = torch.sigmoid(model(image_batch.to(device=device, dtype=torch.float32)))
     # print(model(image.to(device=device, dtype=torch.float32)))
     show = torch.where(show > 0.5, 1, 0).detach().numpy()
     print(show)
-    # if 
-    # axes[0].imshow(image_O, cmap="gray")
+    for i, m in enumerate(imgdir):
+        axes[0].imshow(image_O[i], cmap="gray")
+        axes[0].set_title(f"Original Image\n{m.split('.')[0]}", fontsize=10)
+        axes[1].imshow(image_O[i], cmap="gray")
+        if(np.array_equal(show[i], [1,0])):
+            axes[1].set_title("Predict\nbenign", fontsize=10)
+        elif(np.array_equal(show[i], [0,1])):
+            axes[1].set_title("Predict\nmalignant", fontsize=10)
+        plt.show()
+        # plt.savefig("plt-test/" + file_name + ".png")
 
 
 
