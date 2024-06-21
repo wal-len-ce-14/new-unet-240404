@@ -8,7 +8,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 
 from dataset import data
-from Net import Unet
+from Net import UnetPlusPlusWithAttention
 from tool import countdice, countiou
 
 
@@ -131,7 +131,7 @@ def train(
         print(f"\t[+] iou: {iou[-1]}")
         # save model
         if(float(dice[-1]) > 70 and (t_loss/len(test_Loader)) < 0.2 and e > 20 and iou[-1] > 50):
-            torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
+            torch.save(model, f'./model/seg{name}.pth') 
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]        # save loss
        
@@ -152,5 +152,5 @@ def train(
 
 
 if __name__ == "__main__":
-    model = Unet(1,1)
+    model = UnetPlusPlusWithAttention(1,1)
     train(model, 32, 1e-3, "./img/images/", "./img/masks")

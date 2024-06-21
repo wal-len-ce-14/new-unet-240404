@@ -11,7 +11,7 @@ import time
 
 from dataset import resdata
 from Net import resNet
-from tool import countdice, countiou
+from tool import countdice, countiou, countF1score
 
 def train(
         model,
@@ -28,14 +28,14 @@ def train(
     train_loss = []
     test_loss = []
     acc = []
-    dice = []
+    f1 = []
     iou = []
     recall = []
     start = time.time()
     end = time.time()
     # dataset
     dataset = resdata(img)
-    train_data, test_data = random_split(dataset, [int(len(dataset)*0.85), len(dataset) - int(len(dataset)*0.85)])
+    train_data, test_data = random_split(dataset, [int(len(dataset)*0.8), len(dataset) - int(len(dataset)*0.8)])
     train_Loader = DataLoader(train_data, batch, shuffle=True, drop_last=True)
     test_Loader = DataLoader(test_data, batch, shuffle=False, drop_last=True)
     # set func
@@ -69,7 +69,7 @@ def train(
         # test
         model.train()
         acc_inepoch = 0
-        dice_inepoch = 0
+        f1_inepoch = 0
         iou_inepoch = 0
         for idx, (x, y) in enumerate(test_Loader):
             x = x.to(device=device,dtype=torch.float32)
@@ -81,7 +81,7 @@ def train(
             # print("p",p[-10:],"\ny", y[-10:])
             t_loss += loss.item()
             acc_inepoch += (tr.sum() / tr.numel()).to('cpu')
-            dice_inepoch += countdice(p, y)
+            f1_inepoch += countF1score(p, y)
             iou_inepoch += countiou(p, y)
         from sklearn.metrics import recall_score, confusion_matrix
         if e > 10000:
@@ -101,21 +101,21 @@ def train(
             plt.ylabel('Actual')
             plt.title('Confusion Matrix')
             plt.savefig(f'plt/Confusion Matrix_{e}_{name}')
-        print("p => ", p[-8:])
-        print("y => ", y[-8:])
+        # print("p => ", p[-8:])
+        # print("y => ", y[-8:])
         recall += [recall_score(y.to('cpu'), p.to('cpu'), average=None)[1]*100]
         acc += [acc_inepoch*100 / len(test_Loader)]
-        dice += [dice_inepoch.to("cpu")*100 / len(test_Loader)]
+        f1 += [f1_inepoch.to("cpu")*100 / len(test_Loader)]
         iou += [iou_inepoch.to("cpu")*100 / len(test_Loader)]
         print(f"\t[+] test loss: {t_loss/len(test_Loader)}")
-        print(f"\t[+] dice: {dice[-1]}")
+        print(f"\t[+] f1score: {f1[-1]}")
         print(f"\t[+] iou: {iou[-1]}")
         print(f"\t[+] recall: {recall[-1]}")
         # save model
-        if dice[-1]*iou[-1]*recall[-1]/(t_loss/(len(test_Loader)+0.00001)) > max:
+        if f1[-1]*iou[-1]*recall[-1]/(t_loss/(len(test_Loader)+0.00001)) > max:
             # torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth') 
-            torch.save(model, f'./model/seg{name}_dice{round(float(dice[-1]), 2)}.pth')
-            max = dice[-1]*iou[-1]*recall[-1]/(t_loss/len(test_Loader))
+            torch.save(model, f'./model/seg{name}.pth')
+            max = f1[-1]*iou[-1]*recall[-1]/(t_loss/len(test_Loader))
             print("\t[+] save")
         test_loss += [(t_loss/len(test_Loader))]   
     end = time.time()
@@ -124,10 +124,10 @@ def train(
     train_loss = np.array(train_loss)
     test_loss = np.array(test_loss)
     acc = np.array(acc)                                         
-    dice = np.array(dice)
+    f1 = np.array(f1)
     iou = np.array(iou)  
-
-    return train_loss, test_loss, acc, dice, iou, recall
+    # print(f1)
+    return train_loss, test_loss, acc, f1, iou, recall
 
 if __name__ == "__main__":
     model = resNet(1,2)

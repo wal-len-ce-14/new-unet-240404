@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class DoubleConv(nn.Module):
     def __init__(self, in_channel=3, out_channel=1):
@@ -278,22 +279,30 @@ class resNet(nn.Module): # mynet
         self.x1conv512to512 = DoubleConv(512,512)
         self.x1conv512to1024 = Down(512,1024)
         self.down = resdown(1024, out_c)
+        self.att64 = SelfAttention(64)
+        self.att128 = SelfAttention(128)
+        self.att256 = SelfAttention(256)
+        self.att512 = SelfAttention(512)
     def forward(self, x):
         x1 = self.pool(self.x7conv3to64(x))
         x2 = self.x1conv64to64(x1) + x1
         x3 = self.x1conv64to64(x2) + x2
         x4 = self.x1conv64to64(x3) + x3
+        x4 = self.att64(x4)
         x5 = self.x1conv64to128(x4)
         x6 = self.x1conv128to128(x5) + x5
         x7 = self.x1conv128to128(x6) + x6
         x8 = self.x1conv128to128(x7) + x7
+        x8 = self.att128(x8)
         x9 = self.x1conv128to256(x8)
         x10 = self.x1conv256to256(x9) + x9
         x11 = self.x1conv256to256(x10) + x10
         x12 = self.x1conv256to256(x11) + x11
         x13 = self.x1conv256to256(x12) + x12
+        x13 = self.att256(x13)
         x14 = self.x1conv256to512(x13)
         x15 = self.x1conv512to512(x14) + x14
+        x15 = self.att512(x15)
         x16 = self.x1conv512to1024(x15)
         y = self.down(x16)
         return y
@@ -547,6 +556,163 @@ class resNet152(nn.Module):
         # print(y.shape)
         return y
 
+class SelfAttention(nn.Module):
+    def __init__(self, in_channels, k=8):
+        super(SelfAttention, self).__init__()
+        self.in_channels = in_channels
+        self.k = k
+        
+        self.query_conv = nn.Conv2d(in_channels, in_channels // k, kernel_size=1)
+        self.key_conv = nn.Conv2d(in_channels, in_channels // k, kernel_size=1)
+        self.value_conv = nn.Conv2d(in_channels, in_channels, kernel_size=1)
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        batch_size, channels, height, width = x.size()
+        proj_query = self.query_conv(x).view(batch_size, -1, width * height).permute(0, 2, 1)
+        proj_key = self.key_conv(x).view(batch_size, -1, width * height)
+        energy = torch.bmm(proj_query, proj_key)
+        attention = self.softmax(energy)
+        proj_value = self.value_conv(x).view(batch_size, -1, width * height)
+
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
+        out = out.view(batch_size, channels, height, width)
+
+        out = self.gamma * out + x
+        return out
+
+class Unet_plus_selfattention(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.in_c = in_c
+        self.out_c = out_c
+        self.conv1to64 = DoubleConv(in_c, 64)
+        self.down64to128 = Down(64, 128)
+        self.down128to256 = Down(128, 256)
+        self.down256to512 = Down(256, 512)
+        self.down512to1024 = Down(512, 1024)
+        self.up1024to512 = Up(1024, 512)
+        self.up512to256 = Up(512, 256)
+        self.up256to128 = Up(256, 128)
+        self.up128to64 = Up(128, 64)
+        self.out64to1 = nn.Conv2d(64, out_c, 1, 1, bias=False)
+        self.att1024 = SelfAttention(1024)
+    
+    def forward(self, x):
+        # down, encode
+        x1 = self.conv1to64(x)      
+        x2 = self.down64to128(x1)
+        x3 = self.down128to256(x2)
+        x4 = self.down256to512(x3)
+        x5 = self.down512to1024(x4)
+        # attention
+        # print(x5.shape)
+        x5 = self.att1024(x5)
+        # print(x5.shape)
+        # up, decode
+        y4 = self.up1024to512(x5, x4)
+        y3 = self.up512to256(y4, x3)
+        y2 = self.up256to128(y3, x2)
+        y1 = self.up128to64(y2, x1)
+        y = self.out64to1(y1)
+
+        # return
+        return y
+
+
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+
+class AttentionBlock(nn.Module):
+    def __init__(self, F_g, F_l, n_filters):
+        super(AttentionBlock, self).__init__()
+        self.W_g = nn.Sequential(
+            nn.Conv2d(F_g, n_filters, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.BatchNorm2d(n_filters)
+        )
+
+        self.W_x = nn.Sequential(
+            nn.Conv2d(F_l, n_filters, kernel_size=1, stride=1, padding=1, bias=True),
+            nn.BatchNorm2d(n_filters)
+        )
+
+        self.psi = nn.Sequential(
+            nn.Conv2d(n_filters, 1, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.BatchNorm2d(1),
+            nn.Sigmoid()
+        )
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, g, x):
+        # print(g.shape, x.shape)
+        g1 = self.W_g(g)
+        x1 = self.W_x(x)
+        psi = self.relu(g1 + x1)
+        psi = self.psi(psi)
+        return x * psi
+
+class UnetPlusPlusWithAttention(nn.Module):
+    def __init__(self, in_c, out_c):
+        super(UnetPlusPlusWithAttention, self).__init__()
+
+        # Define your layers here
+        # For example:
+        self.conv1 = nn.Conv2d(in_c, 64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=1)
+
+        self.upconv4 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
+        self.upconv3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.upconv2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.upconv1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+
+        self.attention_block5 = AttentionBlock(1024, 512, 256)
+        self.attention_block4 = AttentionBlock(512, 256, 128)
+        self.attention_block3 = AttentionBlock(256, 128, 64)
+        self.attention_block2 = AttentionBlock(128, 64, 32)
+        self.attention_block1 = AttentionBlock(64, 64, 32)
+
+
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(F.max_pool2d(x1, 2))
+        x3 = self.conv3(F.max_pool2d(x2, 2))
+        x4 = self.conv4(F.max_pool2d(x3, 2))
+        x5 = self.conv5(F.max_pool2d(x4, 2))
+
+        x4 = self.upconv4(x5)
+        x4 = self.attention_block5(x4, x4)
+
+        x3 = self.upconv3(x4)
+        x3 = self.attention_block4(x3, x3)
+
+        x2 = self.upconv2(x3)
+        x2 = self.attention_block3(x2, x2)
+
+        x1 = self.upconv1(x2)
+        x1 = self.attention_block2(x1, x1)
+
+        x = self.attention_block1(x1, x1)
+
+        return x
 
 
 
@@ -555,7 +721,7 @@ class resNet152(nn.Module):
 
 if __name__ == "__main__":
     x = torch.randn(10, 1, 224, 224)
-    res = resNet152(1, 2)
+    res = resNet(1, 2)
     y = res(x)
 
     print(f"input shape: {x.shape}")

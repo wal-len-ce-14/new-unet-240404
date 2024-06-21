@@ -15,3 +15,14 @@ def countiou(pred, target):
     FP = ((1 - target) * pred).sum()
     FN = ((1 - pred) * target).sum()
     return (TP) / (TP + FP + FN + smooth)
+
+def countF1score(pred, target):
+    smooth = 1e-6
+    pred = pred.view(-1)
+    target = target.view(-1)
+    TP = (pred * target).sum()
+    FP = ((1 - target) * pred).sum()
+    FN = ((1 - pred) * target).sum()
+    precision = TP / (TP + FP + smooth) 
+    recall = TP / (TP + FN + smooth)
+    return (2 * (precision * recall)) / (precision + recall)
